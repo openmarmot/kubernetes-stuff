@@ -1,0 +1,12 @@
+keycloak notes 
+
+# based off of this  
+https://www.keycloak.org/getting-started/getting-started-docker
+
+
+# k3s folder 
+simple kubernetes apply script, designed to work with my standard k3s server deployment, but 
+would likely work with any kubernetes install 
+
+# general usage notes 
+note that this is just for testing and is not a production setup 
