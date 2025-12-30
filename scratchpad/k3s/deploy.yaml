@@ -1,0 +1,53 @@
+# deploy.yaml
+# author : andrew@openmarmot.com
+# last update : Oct 2024
+
+# requires my bash script to replace env variables with values
+# requires that you setup AWS ECR access
+
+# describe service to get the nodeport (easier to let kubernetes pick it)
+
+
+---
+# Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: ${kubernetes_name}-service
+  namespace: ${namespace_name} 
+spec:
+  selector:
+    app: ${kubernetes_name}
+  ports:
+  - protocol: TCP
+    port: 5000
+    targetPort: 5000
+  type: NodePort
+
+---
+
+# Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${kubernetes_name}-deployment
+  namespace: ${namespace_name} 
+  labels:
+    app: ${kubernetes_name}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ${kubernetes_name}
+  template:
+    metadata:
+      labels:
+        app: ${kubernetes_name}
+    spec:
+      containers:
+      - name: ${kubernetes_name}
+        image: ${aws_account}.dkr.ecr.${aws_region}.amazonaws.com/${container_name}:${container_tag}
+        imagePullPolicy: Always
+        ports:
+      imagePullSecrets:
+      - name: ${image_pull_secret_name}
