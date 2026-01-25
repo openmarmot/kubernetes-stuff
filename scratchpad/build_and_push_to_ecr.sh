@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # build docker image and push to AWS ECR
-# andrew@openmarmot.com
+# 
 # note - create the ECR repo in the Amazon console before running
 
 set -e

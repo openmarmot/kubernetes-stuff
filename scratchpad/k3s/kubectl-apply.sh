@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Deploy to kubernetes from ECR
-# andrew@openmarmot.com
+# 
 # last update : Oct 2024
 # note - if the image pull is failing, make sure the secret was created in this namespace
 
