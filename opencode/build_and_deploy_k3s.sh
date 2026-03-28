@@ -29,11 +29,8 @@ docker save "localhost/${container_name}:${container_tag}" | \
 
 # CRITICAL: add the docker.io/library/ alias (fixes the checkpoint checker error)
 sudo k3s ctr -n k8s.io images tag \
-  "localhost/${container_name}:${container_tag}" \
-  "docker.io/library/${container_name}:${container_tag}"
-
-echo "✅ Image imported with localhost/ and docker.io/library/ references"
-
+  "localhost/${container_name}:${container_tag}"
+  
 # ====================== DEPLOY ======================
 echo "=== Deploying to Kubernetes ==="
 cd ../k3s || { echo "k3s/ directory not found"; exit 1; }
@@ -65,6 +62,3 @@ kubectl get service "${kubernetes_name}-service" \
   --namespace "${namespace_name}" \
   -o jsonpath='{.spec.ports[0].nodePort}'
 
-# ====================== FINAL CLEANUP ======================
-echo "=== Pruning old unused images (new one is now in use) ==="
-k3s crictl rmi --prune
