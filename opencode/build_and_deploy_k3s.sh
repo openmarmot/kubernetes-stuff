@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# build → import → deploy on k3s
+# build → import → deploy on k3s (Podman + containerd fixed)
 # run as root on the k3s server
 
 set -e
@@ -12,23 +12,27 @@ kubernetes_name="opencode"
 container_port=5000
 container_tag=$(date +%b-%d-%Y-%k-%M)
 
+# ====================== CLEANUP OLD IMAGES FIRST ======================
+echo "=== Pruning old unused images ==="
+k3s crictl rmi --prune
+
 # ====================== BUILD & IMPORT ======================
 echo "=== Building and importing image ==="
 cd docker || { echo "docker/ directory not found"; exit 1; }
 
-# Build with the localhost prefix that Podman forces
+# Build with the localhost/ prefix that Podman forces
 docker build -t "localhost/${container_name}:${container_tag}" .
 
 # Import into containerd
 docker save "localhost/${container_name}:${container_tag}" | \
   k3s ctr -n k8s.io images import -
 
-# Create short-name alias so your deploy.yaml works without any change
+# CRITICAL: add the docker.io/library/ alias (fixes the checkpoint checker error)
 sudo k3s ctr -n k8s.io images tag \
   "localhost/${container_name}:${container_tag}" \
-  "${container_name}:${container_tag}"
+  "docker.io/library/${container_name}:${container_tag}"
 
-echo "Image imported as both localhost/... and ${container_name}:..."
+echo "✅ Image imported with localhost/ and docker.io/library/ references"
 
 # ====================== DEPLOY ======================
 echo "=== Deploying to Kubernetes ==="
@@ -38,7 +42,7 @@ cd ../k3s || { echo "k3s/ directory not found"; exit 1; }
 kubectl create namespace "${namespace_name}" --dry-run=client -o yaml | \
   kubectl apply -f -
 
-# Render + apply (same as before)
+# Render + apply (with variables substituted)
 env \
   namespace_name="${namespace_name}" \
   container_name="${container_name}" \
@@ -47,10 +51,10 @@ env \
   container_tag="${container_tag}" \
   envsubst < ./deploy.yaml | kubectl apply -f -
 
-# Wait for the pod to actually start using the image before pruning
+# Wait for the pod to actually start using the image before final prune
 echo "=== Waiting for deployment rollout ==="
 kubectl rollout status deployment/"${kubernetes_name}-deployment" \
-  --namespace "${namespace_name}" --timeout=60s
+  --namespace "${namespace_name}" --timeout=90s
 
 # ====================== STATUS ======================
 echo "=== Current resources ==="

@@ -36,7 +36,7 @@ spec:
     spec:
       containers:
       - name: ${kubernetes_name}
-        image: ${container_name}:${container_tag}
+        image: localhost/${container_name}:${container_tag}
         imagePullPolicy: Never
         ports:
         - containerPort: ${container_port}
