@@ -27,10 +27,6 @@ docker build -t "localhost/${container_name}:${container_tag}" .
 docker save "localhost/${container_name}:${container_tag}" | \
   k3s ctr -n k8s.io images import -
 
-# CRITICAL: add the docker.io/library/ alias (fixes the checkpoint checker error)
-sudo k3s ctr -n k8s.io images tag \
-  "localhost/${container_name}:${container_tag}"
-  
 # ====================== DEPLOY ======================
 echo "=== Deploying to Kubernetes ==="
 cd ../k3s || { echo "k3s/ directory not found"; exit 1; }
