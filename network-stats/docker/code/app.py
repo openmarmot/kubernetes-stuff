@@ -8,7 +8,7 @@ from flask import Flask, render_template, jsonify, request
 
 app = Flask(__name__)
 DATA_FILE = "/app/data/ping_data.json"
-PING_TARGET = "8.8.8.8"
+PING_TARGET = "1.1.1.1"
 PING_INTERVAL = 300
 PING_COUNT = 4
 
@@ -94,29 +94,46 @@ def stats():
     if not data:
         return jsonify({"message": "No ping data available yet", "data": []})
 
-    successful = [d for d in data if d.get("success")]
-    failed = [d for d in data if not d.get("success")]
+    now = datetime.now()
+    windows = {
+        "5m": 5 * 60,
+        "15m": 15 * 60,
+        "30m": 30 * 60,
+        "1h": 60 * 60,
+        "2h": 2 * 60 * 60,
+    }
 
-    if successful:
-        avg_ms = sum(d["avg_ms"] for d in successful) / len(successful)
-        min_ms = min(d["min_ms"] for d in successful)
-        max_ms = max(d["max_ms"] for d in successful)
-        packet_loss = (len(failed) / len(data)) * 100 if data else 0
-    else:
-        avg_ms = min_ms = max_ms = 0
-        packet_loss = 100 if data else 0
+    def calc_stats(window_data):
+        if not window_data:
+            return {"count": 0, "packet_loss": None, "avg_ms": None, "min_ms": None, "max_ms": None}
+        successful = [d for d in window_data if d.get("success")]
+        failed = [d for d in window_data if not d.get("success")]
+        if successful:
+            return {
+                "count": len(window_data),
+                "packet_loss": round(len(failed) / len(window_data) * 100, 1),
+                "avg_ms": round(sum(d["avg_ms"] for d in successful) / len(successful), 2),
+                "min_ms": round(min(d["min_ms"] for d in successful), 2),
+                "max_ms": round(max(d["max_ms"] for d in successful), 2),
+            }
+        return {
+            "count": len(window_data),
+            "packet_loss": 100.0,
+            "avg_ms": None,
+            "min_ms": None,
+            "max_ms": None,
+        }
+
+    windows_stats = {}
+    for name, seconds in windows.items():
+        cutoff = now.timestamp() - seconds
+        cutoff_dt = datetime.fromtimestamp(cutoff)
+        window_data = [d for d in data if datetime.fromisoformat(d["timestamp"].replace("Z", "+00:00").replace("+00:00", "")) >= cutoff_dt]
+        windows_stats[name] = calc_stats(window_data)
 
     return jsonify({
-        "summary": {
-            "total_checks": len(data),
-            "successful": len(successful),
-            "failed": len(failed),
-            "packet_loss_percent": round(packet_loss, 2),
-            "avg_latency_ms": round(avg_ms, 2),
-            "min_latency_ms": round(min_ms, 2),
-            "max_latency_ms": round(max_ms, 2)
-        },
-        "data": data[-100:]
+        "windows": windows_stats,
+        "recent": data[-20:],
     })
 
 
