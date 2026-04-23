@@ -3,7 +3,8 @@ set -e
 
 IMAGE_NAME="network-stats"
 NAMESPACE="network-stats"
-TAG=$(date +%Y%m%d%H%M%S)
+IMAGE_TAG=$(date +%Y%m%d%H%M%S)
+export IMAGE_TAG NAMESPACE
 
 echo "=== Building Docker image ==="
 docker build -t ${IMAGE_NAME}:${TAG} -f docker/Dockerfile docker/
