@@ -33,7 +33,7 @@ spec:
     spec:
       containers:
         - name: network-stats
-          image: network-stats:${IMAGE_TAG}
+          image: localhost/network-stats:${IMAGE_TAG}
           imagePullPolicy: Never
           ports:
             - containerPort: 5000

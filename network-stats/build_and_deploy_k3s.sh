@@ -7,10 +7,10 @@ IMAGE_TAG=$(date +%Y%m%d%H%M%S)
 export IMAGE_TAG NAMESPACE
 
 echo "=== Building Docker image ==="
-docker build -t ${IMAGE_NAME}:${TAG} -f docker/Dockerfile docker/
+docker build -t ${IMAGE_NAME}:${IMAGE_TAG} -f docker/Dockerfile docker/
 
 echo "=== Importing image into K3s containerd ==="
-docker save ${IMAGE_NAME}:${TAG} | sudo k3s ctr images import -
+docker save ${IMAGE_NAME}:${IMAGE_TAG} | sudo k3s ctr images import -
 
 echo "=== Creating namespace if not exists ==="
 kubectl create namespace ${NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
