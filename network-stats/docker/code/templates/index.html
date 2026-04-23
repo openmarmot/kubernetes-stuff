@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Stats</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #eee;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #00d4ff;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+        }
+        .stat-card .label {
+            font-size: 0.85em;
+            color: #aaa;
+            margin-bottom: 5px;
+        }
+        .stat-card .value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #00d4ff;
+        }
+        .stat-card.good .value { color: #00ff88; }
+        .stat-card.bad .value { color: #ff6b6b; }
+        .section {
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .section h2 {
+            margin-bottom: 15px;
+            color: #00d4ff;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            text-align: left;
+            padding: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        th { color: #00d4ff; }
+        .success { color: #00ff88; }
+        .failed { color: #ff6b6b; }
+        .btn {
+            background: #00d4ff;
+            color: #1a1a2e;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn:hover { background: #00b8d4; }
+        .actions { text-align: center; margin-bottom: 20px; }
+        #loading { display: none; text-align: center; color: #aaa; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Network Stats - Ping Monitor</h1>
+
+        <div class="actions">
+            <button class="btn" onclick="refreshData()">Refresh Data</button>
+            <button class="btn" onclick="triggerPing()">Ping Now</button>
+        </div>
+
+        <div class="stats-grid" id="summary">
+            <div class="stat-card">
+                <div class="label">Total Checks</div>
+                <div class="value" id="total-checks">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Packet Loss</div>
+                <div class="value" id="packet-loss">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Avg Latency</div>
+                <div class="value" id="avg-latency">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Min / Max</div>
+                <div class="value" id="min-max">-</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Recent Ping Results</h2>
+            <div id="loading">Loading...</div>
+            <table id="ping-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Status</th>
+                        <th>Latency (ms)</th>
+                    </tr>
+                </thead>
+                <tbody id="ping-data"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        async function refreshData() {
+            document.getElementById('loading').style.display = 'block';
+            try {
+                const resp = await fetch('/api/stats');
+                const json = await resp.json();
+
+                if (json.summary) {
+                    document.getElementById('total-checks').textContent = json.summary.successful + '/' + json.summary.total_checks;
+                    document.getElementById('packet-loss').textContent = json.summary.packet_loss_percent + '%';
+                    document.getElementById('avg-latency').textContent = json.summary.avg_latency_ms;
+                    document.getElementById('min-max').textContent = json.summary.min_latency_ms + ' / ' + json.summary.max_latency_ms;
+
+                    const lossCard = document.getElementById('packet-loss').closest('.stat-card');
+                    lossCard.className = 'stat-card ' + (json.summary.packet_loss_percent > 5 ? 'bad' : 'good');
+                }
+
+                const tbody = document.getElementById('ping-data');
+                tbody.innerHTML = '';
+                (json.data || []).forEach(row => {
+                    const tr = document.createElement('tr');
+                    const date = new Date(row.timestamp);
+                    const time = date.toLocaleString();
+                    const latency = row.success ? row.avg_ms.toFixed(2) : 'N/A';
+                    tr.innerHTML = `
+                        <td>${time}</td>
+                        <td class="${row.success ? 'success' : 'failed'}">${row.success ? 'OK' : 'FAILED'}</td>
+                        <td>${latency}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (e) {
+                console.error('Failed to load data:', e);
+            }
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        async function triggerPing() {
+            try {
+                await fetch('/api/ping_now', { method: 'POST' });
+                refreshData();
+            } catch (e) {
+                console.error('Failed to trigger ping:', e);
+            }
+        }
+
+        refreshData();
+        setInterval(refreshData, 30000);
+    </script>
+</body>
+</html>

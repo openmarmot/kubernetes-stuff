@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: network-stats
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: network-stats
+  namespace: network-stats
+spec:
+  type: NodePort
+  ports:
+    - port: 5000
+      targetPort: 5000
+  selector:
+    app: network-stats
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: network-stats
+  namespace: network-stats
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: network-stats
+  template:
+    metadata:
+      labels:
+        app: network-stats
+    spec:
+      containers:
+        - name: network-stats
+          image: network-stats:${IMAGE_TAG}
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 5000
+          securityContext:
+            capabilities:
+              add:
+                - NET_RAW
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "100m"
