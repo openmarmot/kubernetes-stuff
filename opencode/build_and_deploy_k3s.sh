@@ -10,7 +10,7 @@ namespace_name="opencode"
 container_name="opencode"
 kubernetes_name="opencode"
 container_port=5000
-container_tag=$(date +%b-%d-%Y-%k-%M)
+container_tag=$(date +%b-%d-%Y-%H-%M)
 
 # ====================== CLEANUP OLD IMAGES FIRST ======================
 echo "=== Pruning old unused images from k3s ==="
