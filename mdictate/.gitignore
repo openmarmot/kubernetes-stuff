@@ -1,0 +1,4 @@
+whisper/whisper.cpp/
+docker/code/.ssl/
+docker/code/__pycache__/
+*.pyc

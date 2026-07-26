@@ -1,0 +1,71 @@
+# deploy.yaml
+# mdictate: Flask STT UI (HTTPS). whisper.cpp is NOT deployed here — run it on the host
+# (or elsewhere) and point the UI at it (e.g. http://<node-ip>:8025).
+---
+# Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: ${kubernetes_name}-service
+  namespace: ${namespace_name}
+spec:
+  selector:
+    app: ${kubernetes_name}
+  type: NodePort
+  ports:
+  - name: https
+    protocol: TCP
+    port: ${container_port}
+    targetPort: ${container_port}
+
+---
+# Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${kubernetes_name}-deployment
+  namespace: ${namespace_name}
+  labels:
+    app: ${kubernetes_name}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ${kubernetes_name}
+  template:
+    metadata:
+      labels:
+        app: ${kubernetes_name}
+    spec:
+      containers:
+      - name: ${kubernetes_name}
+        image: localhost/${container_name}:${container_tag}
+        imagePullPolicy: Never
+        ports:
+        - name: https
+          containerPort: ${container_port}
+        env:
+        - name: STT_HOST
+          value: "0.0.0.0"
+        - name: STT_PORT
+          value: "${container_port}"
+        - name: STT_SSL
+          value: "1"
+        # From the pod, localhost is the pod — set this to a host/LAN IP where
+        # whisper.cpp listens (override in UI anytime). Example: http://10.12.0.51:8025
+        - name: DEFAULT_WHISPER_URL
+          value: "${default_whisper_url}"
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: ${container_port}
+            scheme: HTTPS
+          initialDelaySeconds: 3
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: ${container_port}
+            scheme: HTTPS
+          initialDelaySeconds: 10
+          periodSeconds: 30
